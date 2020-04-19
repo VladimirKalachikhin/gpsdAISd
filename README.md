@@ -19,4 +19,4 @@ $ php gpsdAISd.php [-oDataFileName]
 gpsdAIS daemon checks whether the instance is already running, and exit if it.  
 Remove data file stops gpsdAIS daemon.
 ## Output
-The output data file are JSON encoded array with MMSI keys and an array of data as value. The data are key-value pair as described in gpsd/www/AIVDM.adoc and [e-Navigation Netherlands](http://www.e-navigation.nl/system-messages) site.
+The output data file are JSON encoded array with MMSI keys and an array of data as value. The data are key-value pair as described in gpsd/www/AIVDM.adoc and [e-Navigation Netherlands](http://www.e-navigation.nl/system-messages) site. The units of measurement are given in the human species.
