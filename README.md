@@ -3,9 +3,9 @@
 
 The  [gpsd](https://gpsd.io/) does not support access to AIS data via ?POLL; command.  
 Reason of this [are](https://lists.nongnu.org/archive/html/gpsd-users/2020-04/msg00098.html):  
->a) no existing code.
->b) AIS does not come in data sets, it is a stream.
->c) AIS is a huge stream.
+>a) no existing code.  
+>b) AIS does not come in data sets, it is a stream.  
+>c) AIS is a huge stream.  
 
 But ?POLL; is necessary for server-side of a web application. For example, for the reason that browser may be frozen on background in the mobile devices. So the server should fall asleep. POLL the easiest way to implement this.  
 
