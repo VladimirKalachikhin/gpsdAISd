@@ -12,7 +12,7 @@ daemon exit. If no atime available, daemon exit by timeout.
 
 $minLoopTime = 300000; 	// microseconds, the time of one survey gpsd cycle is not less than; цикл не должен быть быстрее, иначе он займёт весь процессор
 $noDeviceTimeout = 60; 	// seconds, time of continuous absence of the desired device, when reached - exit
-$noVehicleTimeout = 30; 	// seconds, time of continuous absence of the vessel in AIS, when reached - is deleted from the data
+$noVehicleTimeout = 300; 	// seconds, time of continuous absence of the vessel in AIS, when reached - is deleted from the data
 $runTimeOut = 3600; 	// seconds, time activity of daemon after the start. After expiration - exit
 $noAccessTimeOut = 600; 	// seconds, timeout of access to the data file. If expired - exit. If no atime available - not works.
 
