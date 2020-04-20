@@ -1,14 +1,24 @@
 <?php
-/*
-366 байт на судно
+/* gpsd - AIS daemon
+This run as a server-side part of the web application.
+Daemon collects AIS data from gpsd stream and saves it to file. A webapp can 
+read this file asynchronously against the gpsd stream.
+
+gpsdAIS daemon checks whether the instance is already running, and exit if it.
+Remove data file stops gpsdAIS daemon.
+gpsdAIS daemon checks atime of the data file, if possible. If there are no accesses to this file
+daemon exit. If no atime available, daemon exit by timeout.
 */
 
 $minLoopTime = 300000; 	// microseconds, the time of one survey gpsd cycle is not less than; цикл не должен быть быстрее, иначе он займёт весь процессор
 $noDeviceTimeout = 60; 	// seconds, time of continuous absence of the desired device, when reached - exit
-$noVehacleTimeout = 180; 	// seconds, time of continuous absence of the vessel in AIS, when reached - is deleted from the data
+$noVehacleTimeout = 30; 	// seconds, time of continuous absence of the vessel in AIS, when reached - is deleted from the data
+$runTimeOut = 3600; 	// seconds, time activity of daemon after the start. After expiration - exit
+$noAccessTimeOut = 600; 	// seconds, timeout of access to the data file. If expired - exit. If no atime available - not works.
 
 $SEEN_GPS = 0x01; $SEEN_AIS = 0x08;
-$msg='';
+$msg=''; 	// message on exit
+$aisData=array(); 	// AIS data collection
 
 //$dataType=$GLOBALS['SEEN_GPS']|$GLOBALS['SEEN_AIS']; 	// 
 $dataType=$GLOBALS['SEEN_AIS']; 	// 
@@ -22,16 +32,18 @@ $aisJSONfileName = sys_get_temp_dir()."/$aisJSONfileName";
 if(!($host=filter_var($options['h'],FILTER_VALIDATE_DOMAIN))) $host='localhost';
 if(!($port=filter_var($options['p'],FILTER_VALIDATE_INT))) $port=2947;
 
-echo "Begin. dataType=$dataType;<br>\n";
+echo "Begin. dataType=$dataType;\n";
 // Я ли?
 $pid = getmypid();
 exec("ps -d o pid,command | grep '{$_SERVER['PHP_SELF']}'",$psList);
 //print_r($psList); //
 if(count($psList)>3) { $msg="I'm already running"; goto ENDEND;} 	// последние две строки - это собственно ps grep
 
-unlink($aisJSONfileName); 	// файл данных мог остаться
+//unlink($aisJSONfileName); 	// файл данных мог остаться
+$aisData = json_decode(file_get_contents($aisJSONfileName),TRUE); 	// но там ценная информация?
 
 // За работу!
+$startRunTime = time();
 $gpsd  = @stream_socket_client('tcp://'.$host.':'.$port); // открыть сокет 
 if(!$gpsd)  {$msg='no GPSD'; goto ENDEND;}
 echo "Socket opened\n";
@@ -59,19 +71,23 @@ echo "Received first WATCH\n"; //
 print_r($gpsdWATCH); //
 echo "\n";
 
-$aisData=array(); 
 file_put_contents($aisJSONfileName,json_encode($aisData));
-$aisVehacles=array(); $aisVatch = time() + $noVehacleTimeout;
+$aisVehacles=array(); 
+//$aisVatch = time() + $noVehacleTimeout; 	// почистим от исчезнувших судов после первого цикла и таймаута
+$aisVatch = time(); 	// почистим от исчезнувших судов сразу по таймауту - вдруг данные очень старые?
 do {
+	if((time()-$startRunTime)>$runTimeOut) {$msg='Run timeout expired';break;};
 	clearstatcache(TRUE,$aisJSONfileName);
-	if(!file_exists($aisJSONfileName)) break;
+	if(!file_exists($aisJSONfileName)) {$msg='Data file deleted by client - exit';break;};
+	$dataFileAtime = fileatime($aisJSONfileName);
+	if(($dataFileAtime>$startRunTime)AND((time()-$dataFileAtime)>$noAccessTimeOut)) {$msg='No access to data file timeout - exit';break;};	
 	//echo "From devices:\n";
 	$gpsdData = fgets($gpsd); 	// ждём информации из сокета
 	if(!$gpsdData) break;
 	$gpsdData = json_decode($gpsdData,TRUE);
 	//echo "JSON gpsdData:\n "; print_r($gpsdData); echo "\n";
 	if(!in_array($gpsdData['device'],$devicePresent)) {  	// это не то устройство, которое потребовали
-		if((time() - $noDevicesTime) > $noDeviceTimeout) break;
+		if((time() - $noDevicesTime) > $noDeviceTimeout) {$msg='No devices found - exit';break;};
 		goto END;
 	}
 	else $noDevicesTime = time(); 
@@ -175,7 +191,7 @@ do {
 ENDEND:
 fwrite($gpsd, '?WATCH={"enable":false};'); 	// велим демону выключить устройства
 echo "\nSending TURN OFF\n";
-unlink($aisJSONfileName);
+//unlink($aisJSONfileName); 	// там ценная информация?
 echo "Data file removed\n";
 return $msg;
 

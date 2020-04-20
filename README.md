@@ -19,6 +19,7 @@ $ php gpsdAISd.php [-oDataFileName] [-hHOST] [-pPORT]
 -p port of gpsd. Default `2947`
 ## Control
 gpsdAIS daemon checks whether the instance is already running, and exit if it.  
-Remove data file stops gpsdAIS daemon.
+Remove data file stops gpsdAIS daemon.  
+gpsdAIS daemon checks atime of the data file, if possible. If there are no accesses to this file daemon exit. If no atime available, daemon exit by timeout.
 ## Output
 The output data file are JSON encoded array with MMSI keys and an array of data as value. The data are key-value pair as described in gpsd/www/AIVDM.adoc and [e-Navigation Netherlands](http://www.e-navigation.nl/system-messages) site. The units of measurement are given in the human species.
