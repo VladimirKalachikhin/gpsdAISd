@@ -8,6 +8,7 @@ $noDeviceTimeout = 60; 	// seconds, time of continuous absence of the desired de
 $noVehacleTimeout = 180; 	// seconds, time of continuous absence of the vessel in AIS, when reached - is deleted from the data
 
 $SEEN_GPS = 0x01; $SEEN_AIS = 0x08;
+$msg='';
 
 //$dataType=$GLOBALS['SEEN_GPS']|$GLOBALS['SEEN_AIS']; 	// 
 $dataType=$GLOBALS['SEEN_AIS']; 	// 
@@ -26,13 +27,13 @@ echo "Begin. dataType=$dataType;<br>\n";
 $pid = getmypid();
 exec("ps -d o pid,command | grep '{$_SERVER['PHP_SELF']}'",$psList);
 //print_r($psList); //
-if(count($psList)>3) return "I'm already running"; 	// последние две строки - это собственно ps grep
+if(count($psList)>3) { $msg="I'm already running"; goto ENDEND;} 	// последние две строки - это собственно ps grep
 
 unlink($aisJSONfileName); 	// файл данных мог остаться
 
 // За работу!
 $gpsd  = @stream_socket_client('tcp://'.$host.':'.$port); // открыть сокет 
-if(!$gpsd) return 'no GPSD';
+if(!$gpsd)  {$msg='no GPSD'; goto ENDEND;}
 echo "Socket opened\n";
 
 $gpsdVersion = fgets($gpsd); 	// {"class":"VERSION","release":"3.15","rev":"3.15-2build1","proto_major":3,"proto_minor":11}
@@ -49,7 +50,7 @@ $devicePresent = array();
 foreach($gpsdDevices["devices"] as $device) {
 	if($device['flags']&$dataType) $devicePresent[] = $device['path']; 	// список требуемых среди обнаруженных и понятых устройств.
 }
-if(!$devicePresent) return 'no required devices present';
+if(!$devicePresent) {$msg='no required devices present'; goto ENDEND;};
 //print_r($gpsdDevices); //
 //print_r($devicePresent); //
 // Вторым ответом будет
@@ -171,11 +172,12 @@ do {
 	//echo "sleepTime=$sleepTime;\n";
 	if($sleepTime > 0) usleep($sleepTime);
 } while(1);
-
+ENDEND:
 fwrite($gpsd, '?WATCH={"enable":false};'); 	// велим демону выключить устройства
 echo "\nSending TURN OFF\n";
 unlink($aisJSONfileName);
 echo "Data file removed\n";
+return $msg;
 
 function chkVe($vhID) {
 global $aisVehacles;
