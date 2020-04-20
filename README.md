@@ -12,9 +12,11 @@ But ?POLL; is necessary for server-side of a web application. For example, for t
 gpsdAIS daemon collects AIS data from gpsd stream and saves it to (temporary) file. A webapp can read this file asynchronously against the gpsd stream. The file placed on TMP dir. This directory is often located on a virtual file system, therefore frequent overwriting of the file is not a problem.
 ## Usage
 ```
-$ php gpsdAISd.php [-oDataFileName]
+$ php gpsdAISd.php [-oDataFileName] [-hHOST] [-pPORT]
 ```
 -o name of data file on system TMP dir. Default `aisJSONdata`
+-h host of gpsd. Defauli `localhost`
+-p port of gpsd. Default `2947`
 ## Control
 gpsdAIS daemon checks whether the instance is already running, and exit if it.  
 Remove data file stops gpsdAIS daemon.

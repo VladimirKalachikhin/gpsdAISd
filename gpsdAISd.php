@@ -3,21 +3,23 @@
 366 байт на судно
 */
 
-$minLoopTime = 300000; 	// в микросекундах, цикл не должен быть быстрее, иначе он займёт весь процессор
-$noDeviceTimeout = 60; 	// в секундах, время непрерывного отсутствия нужного устройства, по достижении - выход
-$noVehacleTimeout = 180; 	// в секундах, время непрерывного отсутствия судна в AIS, по достижении - удаляется из данных
+$minLoopTime = 300000; 	// microseconds, the time of one survey gpsd cycle is not less than; цикл не должен быть быстрее, иначе он займёт весь процессор
+$noDeviceTimeout = 60; 	// seconds, time of continuous absence of the desired device, when reached - exit
+$noVehacleTimeout = 180; 	// seconds, time of continuous absence of the vessel in AIS, when reached - is deleted from the data
 
 $SEEN_GPS = 0x01; $SEEN_AIS = 0x08;
 
-$host='localhost';$port=2947;$dataType=NULL;
 //$dataType=$GLOBALS['SEEN_GPS']|$GLOBALS['SEEN_AIS']; 	// 
 $dataType=$GLOBALS['SEEN_AIS']; 	// 
 
-$options = getopt("o::");
-print_r($options); //
+$options = getopt("o::h::p::");
+//print_r($options); //
 $aisJSONfileName = filter_var($options['o'],FILTER_SANITIZE_URL);
 if(!$aisJSONfileName) $aisJSONfileName = 'aisJSONdata';
 $aisJSONfileName = sys_get_temp_dir()."/$aisJSONfileName";
+
+if(!($host=filter_var($options['h'],FILTER_VALIDATE_DOMAIN))) $host='localhost';
+if(!($port=filter_var($options['p'],FILTER_VALIDATE_INT))) $port=2947;
 
 echo "Begin. dataType=$dataType;<br>\n";
 // Я ли?
