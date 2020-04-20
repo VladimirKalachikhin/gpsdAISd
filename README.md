@@ -14,9 +14,9 @@ gpsdAIS daemon collects AIS data from gpsd stream and saves it to (temporary) fi
 ```
 $ php gpsdAISd.php [-oDataFileName] [-hHOST] [-pPORT]
 ```
--o name of data file on system TMP dir. Default `aisJSONdata`
--h host of gpsd. Defauli `localhost`
--p port of gpsd. Default `2947`
+-o name of data file on system TMP dir. Default `aisJSONdata`  
+-h host of gpsd. Defauli `localhost`  
+-p port of gpsd. Default `2947`  
 ## Control
 gpsdAIS daemon checks whether the instance is already running, and exit if it.  
 Remove data file stops gpsdAIS daemon.  

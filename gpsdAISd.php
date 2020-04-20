@@ -192,7 +192,7 @@ ENDEND:
 fwrite($gpsd, '?WATCH={"enable":false};'); 	// велим демону выключить устройства
 echo "\nSending TURN OFF\n";
 //unlink($aisJSONfileName); 	// там ценная информация?
-echo "Data file removed\n";
+//echo "Data file removed\n";
 return $msg;
 
 function chkVe($vhID) {
