@@ -12,9 +12,9 @@ daemon exit. If no atime available, daemon exit by timeout.
 
 $minLoopTime = 300000; 	// microseconds, the time of one survey gpsd cycle is not less than; цикл не должен быть быстрее, иначе он займёт весь процессор
 $noDeviceTimeout = 60; 	// seconds, time of continuous absence of the desired device, when reached - exit
-$noVehicleTimeout = 300; 	// seconds, time of continuous absence of the vessel in AIS, when reached - is deleted from the data. "when a ship is moored or at anchor, the position message is only broadcast every 180 seconds;"
+$noVehicleTimeout = 600; 	// seconds, time of continuous absence of the vessel in AIS, when reached - is deleted from the data. "when a ship is moored or at anchor, the position message is only broadcast every 180 seconds;"
 $runTimeOut = 3600; 	// seconds, time activity of daemon after the start. After expiration - exit
-$noAccessTimeOut = 600; 	// seconds, timeout of access to the data file. If expired - exit. If no atime available - not works.
+$noAccessTimeOut = 3600; 	// seconds, timeout of access to the data file. If expired - exit. If no atime available - not works.
 
 $SEEN_GPS = 0x01; $SEEN_AIS = 0x08;
 $msg=''; 	// message on exit
@@ -27,7 +27,8 @@ $options = getopt("o::h::p::");
 //print_r($options); //
 $aisJSONfileName = filter_var(@$options['o'],FILTER_SANITIZE_URL);
 if(!$aisJSONfileName) $aisJSONfileName = 'aisJSONdata';
-$aisJSONfileName = sys_get_temp_dir()."/$aisJSONfileName";
+$dirName = pathinfo($aisJSONfileName, PATHINFO_DIRNAME);
+if((!$dirName) OR ($dirName=='.')) $aisJSONfileName = sys_get_temp_dir()."/".pathinfo($aisJSONfileName,PATHINFO_BASENAME);
 echo "aisJSONfileName=$aisJSONfileName;\n";
 
 if(!($host=filter_var(@$options['h'],FILTER_VALIDATE_DOMAIN))) $host='localhost';
@@ -93,8 +94,10 @@ if(!$devicePresent) {
 $gpsdWATCH = fgets($gpsd); 	// статус WATCH
 echo "Received first WATCH\n"; //
 //print_r($gpsdWATCH); //
-if(!$aisData) file_put_contents($aisJSONfileName,' \n'); 	// создадим файл в знак того, что демон стартовал
 echo "\n";
+
+unlink($aisJSONfileName); 	// 
+file_put_contents($aisJSONfileName,' \n'); 	// создадим файл в знак того, что демон стартовал
 
 $aisVehicles=array(); 
 //$aisVatch = time() + $noVehicleTimeout; 	// почистим от исчезнувших судов после первого цикла и таймаута
@@ -190,12 +193,12 @@ do {
 			elseif($gpsdData['callsign']) $aisData[$vehicle]['callsign'] = $gpsdData['callsign']; 	// Call sign 7 x 6 bit ASCII characters, @@@@@@@ = not available = default. Craft associated with a parent vessel, should use “A” followed by the last 6 digits of the MMSI of the parent vessel. Examples of these craft include towed vessels, rescue boats, tenders, lifeboats and liferafts.
 			if($gpsdData['shipname']=='@@@@@@@@@@@@@@@@@@@@') $aisData[$vehicle]['shipname'] = NULL;
 			elseif($gpsdData['shipname']) $aisData[$vehicle]['shipname'] = filter_var($gpsdData['shipname'],FILTER_SANITIZE_STRING); 	// Maximum 20 characters 6 bit ASCII, as defined in Table 47 “@@@@@@@@@@@@@@@@@@@@” = not available = default. The Name should be as shown on the station radio license. For SAR aircraft, it should be set to “SAR AIRCRAFT NNNNNNN” where NNNNNNN equals the aircraft registration number.
-			if($gpsdData['shiptype']) $aisData[$vehicle]['shiptype'] = $gpsdData['shiptype']; 	// Type of ship and cargo type 0 = not available or no ship = default 1-99 = as defined in § 3.3.2 100-199 = reserved, for regional use 200-255 = reserved, for future use Not applicable to SAR aircraft
-			if($gpsdData['shiptype_text']) $aisData[$vehicle]['shiptype_text'] = filter_var($gpsdData['shiptype_text'],FILTER_SANITIZE_STRING); 	// 
-			if($gpsdData['to_bow']) $aisData[$vehicle]['to_bow'] = $gpsdData['to_bow']; 	// Reference point for reported position. Also indicates the dimension of ship (m) (see Fig. 42 and § 3.3.3) For SAR aircraft, the use of this field may be decided by the responsible administration. If used it should indicate the maximum dimensions of the craft. As default should A = B = C = D be set to “0”
-			if($gpsdData['to_stern']) $aisData[$vehicle]['to_stern'] = $gpsdData['to_stern']; 	// Reference point for reported position.
-			if($gpsdData['to_port']) $aisData[$vehicle]['to_port'] = $gpsdData['to_port']; 	// Reference point for reported position.
-			if($gpsdData['to_starboard']) $aisData[$vehicle]['to_starboard'] = $gpsdData['to_starboard']; 	// Reference point for reported position.
+			if($gpsdData['shiptype']) $aisData[$vehicle]['shiptype'] = filter_var($gpsdData['shiptype'],FILTER_SANITIZE_STRING); 	// Type of ship and cargo type 0 = not available or no ship = default 1-99 = as defined in § 3.3.2 100-199 = reserved, for regional use 200-255 = reserved, for future use Not applicable to SAR aircraft
+			if($gpsdData['shiptype_text']) $aisData[$vehicle]['shiptype_text'] = filter_var($gpsdData['shiptype_text'],FILTER_SANITIZE_NUMBER_INT); 	// 
+			if($gpsdData['to_bow']) $aisData[$vehicle]['to_bow'] = filter_var($gpsdData['to_bow'],FILTER_SANITIZE_NUMBER_FLOAT); 	// Reference point for reported position. Also indicates the dimension of ship (m) (see Fig. 42 and § 3.3.3) For SAR aircraft, the use of this field may be decided by the responsible administration. If used it should indicate the maximum dimensions of the craft. As default should A = B = C = D be set to “0”
+			if($gpsdData['to_stern']) $aisData[$vehicle]['to_stern'] = filter_var($gpsdData['to_stern'],FILTER_SANITIZE_NUMBER_FLOAT); 	// Reference point for reported position.
+			if($gpsdData['to_port']) $aisData[$vehicle]['to_port'] = filter_var($gpsdData['to_port'],FILTER_SANITIZE_NUMBER_FLOAT); 	// Reference point for reported position.
+			if($gpsdData['to_starboard']) $aisData[$vehicle]['to_starboard'] = filter_var($gpsdData['to_starboard'],FILTER_SANITIZE_NUMBER_FLOAT); 	// Reference point for reported position.
 			$aisData[$vehicle]['epfd'] = $gpsdData['epfd']; 	// Type of electronic position fixing device. 0 = undefined (default) 1 = GPS 2 = GLONASS 3 = combined GPS/GLONASS 4 = Loran-C 5 = Chayka 6 = integrated navigation system 7 = surveyed 8 = Galileo, 9-14 = not used 15 = internal GNSS
 			$aisData[$vehicle]['epfd_text'] = $gpsdData['epfd_text']; 	// 
 			$aisData[$vehicle]['eta'] = $gpsdData['eta']; 	// ETA Estimated time of arrival; MMDDHHMM UTC Bits 19-16: month; 1-12; 0 = not available = default  Bits 15-11: day; 1-31; 0 = not available = default Bits 10-6: hour; 0-23; 24 = not available = default Bits 5-0: minute; 0-59; 60 = not available = default For SAR aircraft, the use of this field may be decided by the responsible administration
@@ -232,6 +235,13 @@ do {
 	//if($gpsdData['course']>3590) echo "\nCourse in deg/10=".($gpsdData['course'])."; in deg={$aisData[$vehicle]['course']};\n";
 	//if($gpsdData['to_bow']) echo "\nmmsi=$vehicle; to_bow=".$aisData[$vehicle]['to_bow']."; to_stern=".$aisData[$vehicle]['to_stern']."; to_port=".$aisData[$vehicle]['to_port']."; to_starboard=".$aisData[$vehicle]['to_starboard'].";\n";
 	//if($gpsdData['mmsi']=='215441000') echo "\nlon={$aisData[$vehicle]['lon']};lat={$aisData[$vehicle]['lat']}\n to_bow=".$aisData[$vehicle]['to_bow']."; to_stern=".$aisData[$vehicle]['to_stern']."; to_port=".$aisData[$vehicle]['to_port']."; to_starboard=".$aisData[$vehicle]['to_starboard'].";\n";
+	/*
+	if($gpsdData['mmsi']=='235084466') {
+		echo "JSON gpsdData:\n"; print_r($aisData[$vehicle]);
+		echo "Before sanitize: to_bow=".$gpsdData['to_bow']."; to_stern=".$gpsdData['to_stern']."; to_port=".$gpsdData['to_port']."; to_starboard=".$gpsdData['to_starboard'].";\n";
+		echo "\n";
+	};
+	*/
 	END:
 	file_put_contents($aisJSONfileName,json_encode($aisData));
 	
@@ -247,8 +257,8 @@ do {
 	$memUsage = memory_get_usage();
 	$vehicles = @count($aisData);
 	$value = strlen(json_encode($aisData));
-	$loopTime = round($endTime - $startTime,4);
-	echo getmypid()." time=$loopTime mKs; vehicles=$vehicles; value=$value B; memUsage=$memUsage B    \r";
+	$loopTime = round($endTime - $startTime,6);
+	echo getmypid()." time=$loopTime mKs; vehicles=$vehicles; value=$value B; memUsage=$memUsage B  \r";
 	$sleepTime = $minLoopTime - $loopTime;
 	//echo "sleepTime=$sleepTime;\n";
 	if($sleepTime > 0) usleep($sleepTime);
