@@ -39,14 +39,14 @@ echo "Begin. dataType=$dataType;\n";
 $pid = getmypid();
 //echo "pid=$pid\n";
 
-exec("ps -e o pid,command | grep '".pathinfo(__FILE__,PATHINFO_BASENAME)."'",$psList);
+exec("ps w | grep '".pathinfo(__FILE__,PATHINFO_BASENAME)."'",$psList);
 //print_r($psList); //
 $cnt = 0;
 foreach($psList as $str) {
 	if(strpos($str,(string)$pid)!==FALSE) continue;
 	$str = explode(' ',trim($str)); 	// массив слов
 	foreach($str as $w) {
-		if(substr(trim($w),0,3)=='php') { 	// выполняемая программа, php или php-cli
+		if((strpos($w,'php')!==FALSE)AND(strpos($w,'.php')===FALSE)) { 	// выполняемая программа, php или php-cli, или /my/path/customphp
 			$msg="I'm already running"; 
 			echo "$msg\n"; 
 			goto ENDEND;
