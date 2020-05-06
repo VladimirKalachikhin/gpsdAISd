@@ -5,14 +5,14 @@ The file set in $nmeaFileName and must content correct sentences, one per line.
 Run:
 $ php naiveNMEAdaemon.php
 gpsd run:
-$ gpsd -N -b -n tcp://192.168.10.10:2222
+$ gpsd -N tcp://192.168.10.10:2222
 */
 $nmeaFileName = 'sample1.log'; 	// NMEA sentences file name
 //$bindAddres = "tcp://127.0.0.1:2222"; 	// Daemon's access address
 $bindAddres = "tcp://192.168.10.10:2222"; 	// Daemon's access address
 
 $run = 1800; 		// Overall time of work, in seconds. If 0 - infinity.
-$delay = 2000000; 	// Min interval between sends sentences, in microseconds
+$delay = 100000; 	// Min interval between sends sentences, in microseconds. 100000 are semi-realtime for sample1.log
 
 $strLen = 0;
 $r = array(" | "," / "," - "," \ ");
@@ -23,9 +23,9 @@ $socket = stream_socket_server($bindAddres, $errno, $errstr);
 if (!$socket) {
   return "$errstr ($errno)\n";
 } 
-echo "wait for first connection\n";
+echo "Wait for first connection\n";
 $conn = stream_socket_accept($socket);
-echo "Connected! Go loop\n";
+echo "Connected! Go to loop\n";
 while ($conn) { 	// reconnect everyloop by file
 	$handle = fopen($nmeaFileName, "r");
 	if (FALSE === $handle) {
@@ -36,7 +36,7 @@ while ($conn) { 	// reconnect everyloop by file
 	while (!feof($handle)) {
 		if(($run AND ((time()-$startAllTime)>$run))) {
 			fclose($handle);
-			echo "Timeout, go away\n";
+			echo "Timeout, go away                            \n";
 			break 2;
 		}
 		$startTime = microtime(TRUE);

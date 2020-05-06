@@ -244,6 +244,7 @@ do {
 	*/
 	END:
 	file_put_contents($aisJSONfileName,json_encode($aisData));
+	clearstatcache(TRUE,$aisJSONfileName);
 	
 	if((time()-$aisVatch)>=$noVehicleTimeout) { 	// checking visible of ships periodically
 		echo "\nRefresh the list after ".(time()-$aisVatch)." sec.\n";
