@@ -12,7 +12,7 @@ $nmeaFileName = 'sample1.log'; 	// NMEA sentences file name
 $bindAddres = "tcp://192.168.10.10:2222"; 	// Daemon's access address
 
 $run = 1800; 		// Overall time of work, in seconds. If 0 - infinity.
-$delay = 500000; 	// Min interval between sends sentences, in microseconds
+$delay = 2000000; 	// Min interval between sends sentences, in microseconds
 
 $strLen = 0;
 $r = array(" | "," / "," - "," \ ");
@@ -23,34 +23,42 @@ $socket = stream_socket_server($bindAddres, $errno, $errstr);
 if (!$socket) {
   return "$errstr ($errno)\n";
 } 
-while(!($run AND ((time()-$startAllTime)>$run))) {
-	while ($conn = stream_socket_accept($socket)) { 	// reconnect everyloop by file
-		$handle = fopen($nmeaFileName, "r");
-		if (FALSE === $handle) {
-			exit("Failed to open stream ");
-		}
-		echo "Begin $nmeaFileName with delay {$delay}ms per string\n";
-		while (!feof($handle)) {
-			$startTime = microtime(TRUE);
-			
-			$nmeaData = fread($handle, 8192);
-			//echo "$nmeaData\n";
-			$res = fwrite($conn, $nmeaData . "\n");
-			if($res===FALSE) {
-				fclose($handle);
-				break 2;
-			}
-			$endTime = microtime(TRUE);
-			echo($r[$i]);
-			echo " " . ($endTime-$startTime) . "                    \r";
-			$i++;
-			if($i>=count($r)) $i = 0;
-			usleep($delay);
-		};
-		fclose($handle);
+echo "wait for first connection\n";
+$conn = stream_socket_accept($socket);
+echo "Connected! Go loop\n";
+while ($conn) { 	// reconnect everyloop by file
+	$handle = fopen($nmeaFileName, "r");
+	if (FALSE === $handle) {
+		exit("Failed to open file $nmeaFileName\n");
 	}
-	fclose($conn);
-};
+	echo "Begin $nmeaFileName with delay {$delay}ms per string, send $nStr str\n";
+	$nStr = 0; 	// number of sending string
+	while (!feof($handle)) {
+		if(($run AND ((time()-$startAllTime)>$run))) {
+			fclose($handle);
+			echo "Timeout, go away\n";
+			break 2;
+		}
+		$startTime = microtime(TRUE);
+		$nmeaData = fgets($handle, 2048);
+		//echo "$nmeaData\n";
+		$res = fwrite($conn, $nmeaData . "\n");
+		if($res===FALSE) {
+			echo "Error write to socket. Break connection\n";
+			fclose($conn);
+		}
+		$endTime = microtime(TRUE);
+		$nStr++;
+		echo($r[$i]);
+		echo " " . ($endTime-$startTime) . " string $nStr         \r";
+		$i++;
+		if($i>=count($r)) $i = 0;
+		usleep($delay);
+	};
+	fclose($handle);
+	if(!$conn)	$conn = stream_socket_accept($socket);
+}
+fclose($conn);
 fclose($socket);
 
 

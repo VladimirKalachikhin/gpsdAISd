@@ -10,7 +10,7 @@ gpsdAIS daemon checks atime of the data file, if possible. If there are no acces
 daemon exit. If no atime available, daemon exit by timeout.
 */
 
-$minLoopTime = 300000; 	// microseconds, the time of one survey gpsd cycle is not less than; цикл не должен быть быстрее, иначе он займёт весь процессор
+$minLoopTime = 500000; 	// microseconds, the time of one survey gpsd cycle is not less than; цикл не должен быть быстрее, иначе он займёт весь процессор
 $noDeviceTimeout = 60; 	// seconds, time of continuous absence of the desired device, when reached - exit
 $noVehicleTimeout = 600; 	// seconds, time of continuous absence of the vessel in AIS, when reached - is deleted from the data. "when a ship is moored or at anchor, the position message is only broadcast every 180 seconds;"
 $runTimeOut = 1800; 	// seconds, time activity of daemon after the start. After expiration - exit
