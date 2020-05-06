@@ -24,11 +24,12 @@ if (!$socket) {
   return "$errstr ($errno)\n";
 } 
 while(!($run AND ((time()-$startAllTime)>$run))) {
-	while ($conn = stream_socket_accept($socket)) {
+	while ($conn = stream_socket_accept($socket)) { 	// reconnect everyloop by file
 		$handle = fopen($nmeaFileName, "r");
 		if (FALSE === $handle) {
 			exit("Failed to open stream ");
 		}
+		echo "Begin $nmeaFileName with delay {$delay}ms per string\n";
 		while (!feof($handle)) {
 			$startTime = microtime(TRUE);
 			
