@@ -12,7 +12,7 @@ $nmeaFileName = 'sample1.log'; 	// NMEA sentences file name
 $bindAddres = "tcp://192.168.10.10:2222"; 	// Daemon's access address
 
 $run = 1800; 		// Overall time of work, in seconds. If 0 - infinity.
-$delay = 100000; 	// Min interval between sends sentences, in microseconds. 100000 are semi-realtime for sample1.log
+$delay = 200000; 	// Min interval between sends sentences, in microseconds. 200000 are semi-realtime for sample1.log
 
 $strLen = 0;
 $r = array(" | "," / "," - "," \ ");
@@ -26,7 +26,7 @@ if (!$socket) {
 echo "Wait for first connection\n";
 $conn = stream_socket_accept($socket);
 echo "Connected! Go to loop\n";
-while ($conn) { 	// reconnect everyloop by file
+while ($conn) { 	// 
 	$handle = fopen($nmeaFileName, "r");
 	if (FALSE === $handle) {
 		exit("Failed to open file $nmeaFileName\n");

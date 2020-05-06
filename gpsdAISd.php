@@ -8,9 +8,14 @@ gpsdAIS daemon checks whether the instance is already running, and exit if it.
 Remove data file stops gpsdAIS daemon.
 gpsdAIS daemon checks atime of the data file, if possible. If there are no accesses to this file
 daemon exit. If no atime available, daemon exit by timeout.
+
+Set $minLoopTime to the max, but small enough to have time to collect all the data from gpsd, 
+otherwise, the data will be displayed with an increasing delay.
+So, if two instruments are connected to the gpsd and each sends data once a second,
+the $minLoopTime mast be max 500000 microseconds, or less.
 */
 
-$minLoopTime = 500000; 	// microseconds, the time of one survey gpsd cycle is not less than; цикл не должен быть быстрее, иначе он займёт весь процессор
+$minLoopTime = 100000; 	// microseconds, the time of one survey gpsd cycle is not less than; цикл не должен быть быстрее, иначе он займёт весь процессор.
 $noDeviceTimeout = 60; 	// seconds, time of continuous absence of the desired device, when reached - exit
 $noVehicleTimeout = 600; 	// seconds, time of continuous absence of the vessel in AIS, when reached - is deleted from the data. "when a ship is moored or at anchor, the position message is only broadcast every 180 seconds;"
 $runTimeOut = 1800; 	// seconds, time activity of daemon after the start. After expiration - exit
@@ -54,7 +59,6 @@ foreach($psList as $str) {
 	}
 }
 
-$aisData = json_decode(file_get_contents($aisJSONfileName),TRUE); 	// но там ценная информация?
 // За работу!
 $startRunTime = time();
 $gpsd  = stream_socket_client('tcp://'.$host.':'.$port); // открыть сокет 
@@ -96,12 +100,15 @@ echo "Received first WATCH\n"; //
 //print_r($gpsdWATCH); //
 echo "\n";
 
-unlink($aisJSONfileName); 	// 
-file_put_contents($aisJSONfileName,' \n'); 	// создадим файл в знак того, что демон стартовал
-
+clearstatcache(TRUE,$aisJSONfileName);
+if(file_exists($aisJSONfileName)) {
+	$aisData = json_decode(file_get_contents($aisJSONfileName),TRUE); 	// там ценная информация
+}
+else {
+	file_put_contents($aisJSONfileName,"\n");
+}
 $aisVehicles=array(); 
-//$aisVatch = time() + $noVehicleTimeout; 	// почистим от исчезнувших судов после первого цикла и таймаута
-$aisVatch = time(); 	// почистим от исчезнувших судов сразу по таймауту - вдруг данные очень старые?
+$aisVatch = time() - $noVehicleTimeout; 	// почистим от исчезнувших судов после первого цикла и таймаута
 do {
 	if((time()-$startRunTime)>$runTimeOut) {
 		//unlink($aisJSONfileName); 	// 
@@ -246,7 +253,7 @@ do {
 	file_put_contents($aisJSONfileName,json_encode($aisData));
 	clearstatcache(TRUE,$aisJSONfileName);
 	
-	if((time()-$aisVatch)>=$noVehicleTimeout) { 	// checking visible of ships periodically
+	if((time()-$aisVatch) >= $noVehicleTimeout) { 	// checking visible of ships periodically
 		echo "\nRefresh the list after ".(time()-$aisVatch)." sec.\n";
 		$bf = count($aisData);
 		$aisData = array_filter($aisData,'chkVe',ARRAY_FILTER_USE_KEY);
