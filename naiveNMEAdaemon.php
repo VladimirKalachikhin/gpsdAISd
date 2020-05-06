@@ -23,8 +23,8 @@ $socket = stream_socket_server($bindAddres, $errno, $errstr);
 if (!$socket) {
   return "$errstr ($errno)\n";
 } 
-while ($conn = stream_socket_accept($socket)) {
-	while(!($run AND ((time()-$startAllTime)>$run))) {
+while(!($run AND ((time()-$startAllTime)>$run))) {
+	while ($conn = stream_socket_accept($socket)) {
 		$handle = fopen($nmeaFileName, "r");
 		if (FALSE === $handle) {
 			exit("Failed to open stream ");
@@ -34,7 +34,12 @@ while ($conn = stream_socket_accept($socket)) {
 			
 			$nmeaData = fread($handle, 8192);
 			//echo "$nmeaData\n";
-			fwrite($conn, $nmeaData . "\n");
+			$res = fwrite($conn, $nmeaData . "\n");
+			if($res===FALSE) {
+				fclose($handle);
+				break 2;
+			}
+			$endTime = microtime(TRUE);
 			echo($r[$i]);
 			echo " " . ($endTime-$startTime) . "                    \r";
 			$i++;
