@@ -9,7 +9,9 @@ Reason of this [are](https://lists.nongnu.org/archive/html/gpsd-users/2020-04/ms
 
 But ?POLL; is necessary for server-side of a web application. For example, for the reason that browser may be frozen on background in the mobile devices. So the server should fall asleep. POLL the easiest way to implement this.  
 
-gpsdAIS daemon collects AIS data from gpsd stream and saves it to (temporary) file. A webapp can read this file asynchronously against the gpsd stream. The file placed on TMP dir. This directory is often located on a virtual file system, therefore frequent overwriting of the file is not a problem.
+gpsdAIS daemon collects AIS data from gpsd stream and saves it to (temporary) file. A webapp can read this file asynchronously against the gpsd stream. The file placed on TMP dir. This directory is often located on a virtual file system, therefore frequent overwriting of the file is not a problem.  
+
+[GaladrielMap](https://github.com/VladimirKalachikhin/Galadriel-map/tree/master)  use this daemon for display AIS information.
 ## Usage
 ```
 $ php gpsdAISd.php [-oDataFileName] [-hHOST] [-pPORT]
