@@ -1,4 +1,4 @@
-# gpsdAIS daemon
+# gpsdAIS daemon [![License: CC BY-SA 4.0](https://img.shields.io/badge/License-CC%20BY--SA%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-sa/4.0/)
 **version 0.1**  
 
 The  [gpsd](https://gpsd.io/) does not support access to AIS data via ?POLL; command.  
