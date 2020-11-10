@@ -8,7 +8,7 @@ Required options:
 Run:
 $ php naiveNMEAdaemon.php -isample1.log -btcp://127.0.0.1:2222
 gpsd run to connect this:
-$ gpsd -N tcp://192.168.10.10:2222
+$ gpsd -N -n tcp://192.168.10.10:2222
 */
 $options = getopt("i::b::");
 if(!($nmeaFileName = filter_var(@$options['i'],FILTER_SANITIZE_URL))) $nmeaFileName = 'sample1.log'; 	// NMEA sentences file name;
@@ -31,6 +31,7 @@ if (!$socket) {
 echo "Wait for first connection\n";
 $conn = stream_socket_accept($socket);
 echo "Connected! Go to loop\n";
+$nStr = 0; 	// number of sending string
 while ($conn) { 	// 
 	$handle = fopen($nmeaFileName, "r");
 	if (FALSE === $handle) {
@@ -40,7 +41,7 @@ while ($conn) { 	//
 		echo "Send $nStr str                         \n";
 		statShow();
 	}
-	echo "Begin $nmeaFileName with delay {$delay}ms per string\n";
+	echo "\nBegin $nmeaFileName with delay {$delay}ms per string\n";
 	echo "\n";
 	$nStr = 0; 	// number of sending string
 	while (!feof($handle)) {
@@ -79,7 +80,7 @@ function statCollect($nmeaData) {
 /**/
 global $statCollection;
 $nmeaData = substr(trim(explode(',',$nmeaData)[0]),-3);
-if($nmeaData) $statCollection["$nmeaData"]++;
+if($nmeaData) @$statCollection["$nmeaData"]++;
 /*
 if(strpos($nmeaData,'ALM')!==FALSE) $statCollection['ALM']++;
 elseif(strpos($nmeaData,'AIVDM')!==FALSE) $statCollection['AIVDM']++;
