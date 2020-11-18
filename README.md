@@ -1,5 +1,5 @@
 # gpsdAIS daemon [![License: CC BY-SA 4.0](https://img.shields.io/badge/License-CC%20BY--SA%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-sa/4.0/)
-**version 0.1**  
+**version 1.0**  
 
 The  [gpsd](https://gpsd.io/) does not support access to AIS data via ?POLL; command.  
 Reason of this [are](https://lists.nongnu.org/archive/html/gpsd-users/2020-04/msg00098.html):  
@@ -22,7 +22,7 @@ $ php gpsdAISd.php [-oDataFileName] [-hHOST] [-pPORT]
 ## Control
 gpsdAIS daemon checks whether the instance is already running, and exit if it.  
 Remove data file stops gpsdAIS daemon.  
-gpsdAIS daemon checks atime of the data file, if possible. If there are no accesses to this file daemon exit. If no atime available, daemon exit by timeout.  
+gpsdAIS daemon checks the flag file. Daemon continues to run if the flag file __not present__. If present - daemon stop after timeout. Use this to avoid too frequent starts daemon.  
 Timeouts define in the begin of the script file, for easily adjusted it.
 ## Output
 The output data file are JSON encoded array with MMSI keys and an array of data as value. The data are key-value pair as described in gpsd/www/AIVDM.adoc and [e-Navigation Netherlands](http://www.e-navigation.nl/system-messages) site, except:  

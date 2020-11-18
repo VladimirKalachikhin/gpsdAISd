@@ -11,12 +11,17 @@ gpsd run to connect this:
 $ gpsd -N -n tcp://192.168.10.10:2222
 */
 $options = getopt("i::b::");
-if(!($nmeaFileName = filter_var(@$options['i'],FILTER_SANITIZE_URL))) $nmeaFileName = 'sample1.log'; 	// NMEA sentences file name;
+if(!($nmeaFileName = filter_var($options['i'],FILTER_SANITIZE_URL))) $nmeaFileName = 'sample1.log'; 	// NMEA sentences file name;
 if(!($bindAddres=filter_var(@$options['b'],FILTER_VALIDATE_DOMAIN))) $bindAddres = "tcp://127.0.0.1:2222"; 	// Daemon's access address;
+if($nmeaFileName=='sample1.log') {
+	echo "Usage:\n  php naiveNMEAdaemon.php -isample1.log [-btcp://127.0.0.1:2222]\n";
+	echo "now run naiveNMEAdaemon.php -i$nmeaFileName -b$bindAddres\n";
+}
 
 //$run = 1800; 		// Overall time of work, in seconds. If 0 - infinity.
 $run = 0; 		// 
-$delay = 200000; 	// Min interval between sends sentences, in microseconds. 200000 are semi-realtime for sample1.log
+//$delay = 200000; 	// Min interval between sends sentences, in microseconds. 200000 are semi-realtime for sample1.log
+$delay = 100000; 	// Min interval between sends sentences, in microseconds. 200000 are semi-realtime for sample1.log
 
 $strLen = 0;
 $r = array(" | "," / "," - "," \ ");
