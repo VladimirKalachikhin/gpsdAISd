@@ -63,6 +63,12 @@ while ($conn) { 	//
 		if($res===FALSE) {
 			echo "Error write to socket. Break connection\n";
 			fclose($conn);
+			echo "Try to reopen\n";
+			$conn = stream_socket_accept($socket);
+			if(!$conn) {
+				echo "Reopen false\n";
+				break;
+			}
 		}
 		$endTime = microtime(TRUE);
 		$nStr++;
