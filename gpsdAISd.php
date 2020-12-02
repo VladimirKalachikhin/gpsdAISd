@@ -161,14 +161,22 @@ do {
 		case 3:		// http://www.e-navigation.nl/content/position-report
 			$aisData[$vehicle]['status'] = (int)filter_var($gpsdData['status'],FILTER_SANITIZE_NUMBER_INT); 	// Navigational status 0 = under way using engine, 1 = at anchor, 2 = not under command, 3 = restricted maneuverability, 4 = constrained by her draught, 5 = moored, 6 = aground, 7 = engaged in fishing, 8 = under way sailing, 9 = reserved for future amendment of navigational status for ships carrying DG, HS, or MP, or IMO hazard or pollutant category C, high speed craft (HSC), 10 = reserved for future amendment of navigational status for ships carrying dangerous goods (DG), harmful substances (HS) or marine pollutants (MP), or IMO hazard or pollutant category A, wing in ground (WIG);11 = power-driven vessel towing astern (regional use), 12 = power-driven vessel pushing ahead or towing alongside (regional use); 13 = reserved for future use, 14 = AIS-SART (active), MOB-AIS, EPIRB-AIS 15 = undefined = default (also used by AIS-SART, MOB-AIS and EPIRB-AIS under test)
 			$aisData[$vehicle]['status_text'] = filter_var($gpsdData['status_text'],FILTER_SANITIZE_STRING);
-			$aisData[$vehicle]['turn'] = (int)filter_var($gpsdData['turn'],FILTER_SANITIZE_NUMBER_INT); 	// Rate of turn ROTAIS 0 to +126 = turning right at up to 708° per min or higher 0 to –126 = turning left at up to 708° per min or higher Values between 0 and 708° per min coded by ROTAIS = 4.733 SQRT(ROTsensor) degrees per min where  ROTsensor is the Rate of Turn as input by an external Rate of Turn Indicator (TI). ROTAIS is rounded to the nearest integer value. +127 = turning right at more than 5° per 30 s (No TI available) –127 = turning left at more than 5° per 30 s (No TI available) –128 (80 hex) indicates no turn information available (default). ROT data should not be derived from COG information.
-			if($gpsdData['speed']>1022) $aisData[$vehicle]['speed'] = NULL;
-			else $aisData[$vehicle]['speed'] = (float)filter_var($gpsdData['speed'],FILTER_SANITIZE_NUMBER_FLOAT)*185.2/3600; 	// SOG Speed over ground in m/sec 	(in 1/10 knot steps (0-102.2 knots) 1 023 = not available, 1 022 = 102.2 knots or higher)
 			$aisData[$vehicle]['accuracy'] = (int)filter_var($gpsdData['accuracy'],FILTER_SANITIZE_NUMBER_INT); 	// Position accuracy The position accuracy (PA) flag should be determined in accordance with Table 50 1 = high (£ 10 m) 0 = low (>10 m) 0 = default
-			if($gpsdData['lon']==181) $aisData[$vehicle]['lon'] = NULL;
-			else $aisData[$vehicle]['lon'] = (float)filter_var($gpsdData['lon'],FILTER_SANITIZE_NUMBER_FLOAT)/(10000*60); 	// Longitude in degrees	( 1/10 000 min (±180°, East = positive (as per 2’s complement), West = negative (as per 2’s complement). 181 = (6791AC0h) = not available = default) )
-			if($gpsdData['lat']==91) $aisData[$vehicle]['lat'] = NULL;
-			else $aisData[$vehicle]['lat'] = (float)filter_var($gpsdData['lat'],FILTER_SANITIZE_NUMBER_FLOAT)/(10000*60); 	// Latitude in degrees (1/10 000 min (±90°, North = positive (as per 2’s complement), South = negative (as per 2’s complement). 91° (3412140h) = not available = default))
+			if($gpsdData['scaled']) { 	// данные уже приведены к человеческому виду, но скорость в УЗЛАХ!!!!
+				$aisData[$vehicle]['turn'] = $gpsdData['turn']; 	// градусы в минуту со знаком или строка? one of the strings "fastright" or "fastleft" if it is out of the AIS encoding range; otherwise it is quadratically mapped back to the turn sensor number in degrees per minute
+				$aisData[$vehicle]['speed'] = ($gpsdData['speed']*1852)/(60*60); 	// SOG Speed over ground in m/sec 	
+				$aisData[$vehicle]['lon'] = (float)$gpsdData['lon']; 	// 
+				$aisData[$vehicle]['lat'] = (float)$gpsdData['lat'];
+			}
+			else {
+				//$aisData[$vehicle]['turn'] = (int)filter_var($gpsdData['turn'],FILTER_SANITIZE_NUMBER_INT); 	// тут чёта сложное...  Rate of turn ROTAIS 0 to +126 = turning right at up to 708° per min or higher 0 to –126 = turning left at up to 708° per min or higher Values between 0 and 708° per min coded by ROTAIS = 4.733 SQRT(ROTsensor) degrees per min where  ROTsensor is the Rate of Turn as input by an external Rate of Turn Indicator (TI). ROTAIS is rounded to the nearest integer value. +127 = turning right at more than 5° per 30 s (No TI available) –127 = turning left at more than 5° per 30 s (No TI available) –128 (80 hex) indicates no turn information available (default). ROT data should not be derived from COG information.
+				if($gpsdData['speed']>1022) $aisData[$vehicle]['speed'] = NULL;
+				else $aisData[$vehicle]['speed'] = (float)filter_var($gpsdData['speed'],FILTER_SANITIZE_NUMBER_FLOAT)*185.2/3600; 	// SOG Speed over ground in m/sec 	(in 1/10 knot steps (0-102.2 knots) 1 023 = not available, 1 022 = 102.2 knots or higher)
+				if($gpsdData['lon']==181) $aisData[$vehicle]['lon'] = NULL;
+				else $aisData[$vehicle]['lon'] = (float)filter_var($gpsdData['lon'],FILTER_SANITIZE_NUMBER_FLOAT)/(10000*60); 	// Longitude in degrees	( 1/10 000 min (±180°, East = positive (as per 2’s complement), West = negative (as per 2’s complement). 181 = (6791AC0h) = not available = default) )
+				if($gpsdData['lat']==91) $aisData[$vehicle]['lat'] = NULL;
+				else $aisData[$vehicle]['lat'] = (float)filter_var($gpsdData['lat'],FILTER_SANITIZE_NUMBER_FLOAT)/(10000*60); 	// Latitude in degrees (1/10 000 min (±90°, North = positive (as per 2’s complement), South = negative (as per 2’s complement). 91° (3412140h) = not available = default))
+			}
 			if($gpsdData['course']==3600) $aisData[$vehicle]['course'] = NULL;
 			else $aisData[$vehicle]['course'] = (float)filter_var($gpsdData['course'],FILTER_SANITIZE_NUMBER_FLOAT)/10; 	// Путевой угол. COG Course over ground in degrees ( 1/10 = (0-3 599). 3 600 (E10h) = not available = default. 3 601-4 095 should not be used)
 			if($gpsdData['heading']==511) $aisData[$vehicle]['heading'] = NULL;
@@ -197,7 +205,12 @@ do {
 			$aisData[$vehicle]['epfd'] = (int)filter_var($gpsdData['epfd'],FILTER_SANITIZE_NUMBER_INT); 	// Type of electronic position fixing device. 0 = undefined (default) 1 = GPS 2 = GLONASS 3 = combined GPS/GLONASS 4 = Loran-C 5 = Chayka 6 = integrated navigation system 7 = surveyed 8 = Galileo, 9-14 = not used 15 = internal GNSS
 			$aisData[$vehicle]['epfd_text'] = (string)$gpsdData['epfd_text']; 	// 
 			$aisData[$vehicle]['eta'] = (string)$gpsdData['eta']; 	// ETA Estimated time of arrival; MMDDHHMM UTC Bits 19-16: month; 1-12; 0 = not available = default  Bits 15-11: day; 1-31; 0 = not available = default Bits 10-6: hour; 0-23; 24 = not available = default Bits 5-0: minute; 0-59; 60 = not available = default For SAR aircraft, the use of this field may be decided by the responsible administration
-			if($gpsdData['draught']) $aisData[$vehicle]['draught'] = (float)filter_var($gpsdData['draught'],FILTER_SANITIZE_NUMBER_INT)/10; 	// Maximum present static draught In m ( 1/10 m, 255 = draught 25.5 m or greater, 0 = not available = default; in accordance with IMO Resolution A.851 Not applicable to SAR aircraft, should be set to 0)
+			if($gpsdData['scaled']) { 	// данные уже приведены к человеческому виду, но скорость в УЗЛАХ!!!!
+				if($gpsdData['draught']) $aisData[$vehicle]['draught'] = (float)$gpsdData['draught']; 	// в метрах
+			}
+			else {
+				if($gpsdData['draught']) $aisData[$vehicle]['draught'] = (float)filter_var($gpsdData['draught'],FILTER_SANITIZE_NUMBER_INT)/10; 	// Maximum present static draught In m ( 1/10 m, 255 = draught 25.5 m or greater, 0 = not available = default; in accordance with IMO Resolution A.851 Not applicable to SAR aircraft, should be set to 0)
+			}
 			$aisData[$vehicle]['destination'] = filter_var($gpsdData['destination'],FILTER_SANITIZE_STRING); 	// Destination Maximum 20 characters using 6-bit ASCII; @@@@@@@@@@@@@@@@@@@@ = not available For SAR aircraft, the use of this field may be decided by the responsible administration
 			$aisData[$vehicle]['dte'] = (int)filter_var($gpsdData['dte'],FILTER_SANITIZE_NUMBER_INT); 	// DTE Data terminal equipment (DTE) ready (0 = available, 1 = not available = default) (see § 3.3.1)
 			break;
