@@ -69,11 +69,17 @@ $gpsdVersion = fgets($gpsd); 	// {"class":"VERSION","release":"3.15","rev":"3.15
 echo "Received VERSION \n";
 //echo "$gpsdVersion \n";
 
-fwrite($gpsd, '?WATCH={"enable":true,"json":true};'); 	// велим демону включить устройства
+$params = array(
+	"enable"=>TRUE,
+	"json"=>TRUE,
+	"scaled"=>TRUE, 	// преобразование единиц в gpsd. Возможно, это поможет с углом поворота, который я не декодирую
+	"split24"=>TRUE 	// объединять части длинных сообщений
+);
+fwrite($gpsd, '?WATCH='.json_encode($params)); 	// велим демону включить устройства
 echo "Sending TURN ON\n";
 // Первым ответом будет:
 $gpsdDevices = fgets($gpsd); 	// {"class":"DEVICES","devices":[{"class":"DEVICE","path":"/tmp/ttyS21","activated":"2017-09-20T20:13:02.636Z","native":0,"bps":38400,"parity":"N","stopbits":1,"cycle":1.00}]}
-echo "Received DEVICES\n"; //
+//echo "Received DEVICES\n"; //
 $gpsdDevices = json_decode($gpsdDevices,TRUE);
 //print_r($gpsdDevices); //
 $devicePresent = array();
