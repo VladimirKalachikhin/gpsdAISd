@@ -55,7 +55,7 @@ $startRunTime = time();
 clearstatcache(TRUE,$daemonRunningFlag);
 file_put_contents($daemonRunningFlag,serialize($startRunTime)); 	// выставим флаг
 chmod($daemonRunningFlag,0666); 	// 
-$gpsd  = stream_socket_client('tcp://'.$host.':'.$port); // открыть сокет 
+$gpsd  = stream_socket_client('tcp://'.$host.':'.$port,$errno,$errstr); // открыть сокет 
 //stream_set_blocking($gpsd,FALSE); 	// установим неблокирующий режим чтения. Что-то я здесь не понял...
 if(!$gpsd)  {
 	chkaisDataFile(); 	// почистим файл данных
@@ -63,43 +63,72 @@ if(!$gpsd)  {
 	echo "$msg\n"; 
 	goto ENDEND;
 }
-echo "Socket opened\n";
+echo "Socket opened, handshaking\n";
+$controlClasses = array('VERSION','DEVICES','DEVICE','WATCH');
+$WATCHsend = FALSE;
+do { 	// при каскадном соединении нескольких gpsd заголовков может быть много
+	$buf = fgets($gpsd); 
+	if($buf === FALSE) { 	// gpsd умер
+		echo "\nFailed to read data from gpsd: $errstr\n";
+	    socket_close($gpsd);
+		break;
+	}
+	if (!$buf = trim($buf)) {
+		continue;
+	}
+	$buf = json_decode($buf,TRUE);
+	switch($buf['class']){
+	case 'VERSION': 	// можно получить от slave gpsd посде WATCH
+		if(!$WATCHsend) { 	// команды WATCH ещё не посылали
+			$params = array(
+				"enable"=>TRUE,
+				"json"=>TRUE,
+				"scaled"=>TRUE, 	// преобразование единиц в gpsd. Возможно, это поможет с углом поворота, который я не декодирую
+				"split24"=>TRUE 	// объединять части длинных сообщений
+			);
+			$res = fwrite($gpsd, '?WATCH='.json_encode($params)."\n"); 	// велим демону включить устройства
+			if($res === FALSE) { 	// gpsd умер
+				echo "\nFailed to send WATCH to gpsd: $errstr\n";
+				socket_close($gpsd);
+				break 2; 	// облом, уходим
+			}
+			$WATCHsend = TRUE;
+			echo "Sending TURN ON\n";
+		}
+		break;
+	case 'DEVICES': 	// соберём подключенные устройства со всех gpsd, включая slave
+		echo "Received DEVICES\n"; //
+		$devicePresent = array();
+		foreach($buf["devices"] as $device) {
+			if($device['flags']&$dataType) $devicePresent[] = $device['path']; 	// список требуемых среди обнаруженных и понятых устройств.
+		}
+		break;
+	case 'DEVICE': 	// здесь информация о подключенных slave gpsd, т.е., общая часть path в имени устройства. Полезно для опроса конкретного устройства, но нам не надо. 
+		echo "Received about slave DEVICE\n"; //
+		break;
+	case 'WATCH': 	// 
+		echo "Received WATCH\n"; //
+		//print_r($gpsdWATCH); //
+		break;
+	}
+	
+}while(in_array($buf['class'],$controlClasses));
 
-$gpsdVersion = fgets($gpsd); 	// {"class":"VERSION","release":"3.15","rev":"3.15-2build1","proto_major":3,"proto_minor":11}
-echo "Received VERSION \n";
-//echo "$gpsdVersion \n";
+chkaisDataFile(); 	// почистим файл данных
 
-$params = array(
-	"enable"=>TRUE,
-	"json"=>TRUE,
-	"scaled"=>TRUE, 	// преобразование единиц в gpsd. Возможно, это поможет с углом поворота, который я не декодирую
-	"split24"=>TRUE 	// объединять части длинных сообщений
-);
-fwrite($gpsd, '?WATCH='.json_encode($params)); 	// велим демону включить устройства
-echo "Sending TURN ON\n";
-// Первым ответом будет:
-$gpsdDevices = fgets($gpsd); 	// {"class":"DEVICES","devices":[{"class":"DEVICE","path":"/tmp/ttyS21","activated":"2017-09-20T20:13:02.636Z","native":0,"bps":38400,"parity":"N","stopbits":1,"cycle":1.00}]}
-//echo "Received DEVICES\n"; //
-$gpsdDevices = json_decode($gpsdDevices,TRUE);
-//print_r($gpsdDevices); //
-$devicePresent = array();
-foreach($gpsdDevices["devices"] as $device) {
-	if($device['flags']&$dataType) $devicePresent[] = $device['path']; 	// список требуемых среди обнаруженных и понятых устройств.
+if(!$gpsd) {
+	$msg = "no gpsd present\n"; 
+	goto ENDEND;
 }
 if(!$devicePresent) {
-	chkaisDataFile(); 	// почистим файл данных
-	$msg='no required devices present';
-	echo "$msg\n"; 
+	$msg = "no required devices present\n"; 
 	goto ENDEND;
 };
-//print_r($gpsdDevices); //
+$devicePresent = array_unique($devicePresent);
 //print_r($devicePresent); //
-// Вторым ответом будет
-$gpsdWATCH = fgets($gpsd); 	// статус WATCH
-echo "Received first WATCH\n"; //
-//print_r($gpsdWATCH); //
-echo "\n";
 
+echo "Handshaked, recieve data\n";
+echo "\n";
 $aisVehicles=array(); 	// массив mmsi передаваемых от gpsd целей
 $aisVatch = time() - $noVehicleTimeout; 	// почистим от исчезнувших судов после первого цикла и таймаута
 do {
@@ -138,7 +167,7 @@ do {
 		//break;
 	}
 	$gpsdData = json_decode($gpsdData,TRUE);
-	//echo "JSON gpsdData:\n "; print_r($gpsdData); echo "\n";
+	//echo "\nJSON gpsdData:\n "; print_r($gpsdData); echo "\n";
 	if(!in_array($gpsdData['device'],$devicePresent)) {  	// это не то устройство, которое потребовали
 		$msg='No devices found - wait';
 		echo "\n$msg\n"; 
@@ -158,6 +187,7 @@ do {
 		$vehicle = trim((string)$gpsdData['mmsi']);
 		$aisVehicles[] = $vehicle;
 		$aisData[$vehicle]['mmsi'] = $vehicle;
+		if($gpsdData['netAIS']) $aisData[$vehicle]['netAIS'] = 1; 	// 
 		switch($gpsdData['type']) {
 		case 27:
 		case 18:
@@ -192,7 +222,7 @@ do {
 			$aisData[$vehicle]['maneuver'] = (int)filter_var($gpsdData['maneuver'],FILTER_SANITIZE_NUMBER_INT); 	// Special manoeuvre indicator 0 = not available = default 1 = not engaged in special manoeuvre 2 = engaged in special manoeuvre (i.e. regional passing arrangement on Inland Waterway)
 			$aisData[$vehicle]['raim'] = (int)filter_var($gpsdData['raim'],FILTER_SANITIZE_NUMBER_INT); 	// RAIM-flag Receiver autonomous integrity monitoring (RAIM) flag of electronic position fixing device; 0 = RAIM not in use = default; 1 = RAIM in use. See Table 50
 			$aisData[$vehicle]['radio'] = (string)$gpsdData['radio']; 	// Communication state
-			break;
+			//break; 	//comment break чтобы netAIS мог посылать информацию типа 5,24 и 6,8 в сообщени типа 1. Но gpsdAISd не имеет дела с netAIS?
 		case 5: 	// http://www.e-navigation.nl/content/ship-static-and-voyage-related-data
 		case 24: 	// Vendor ID не поддерживается http://www.e-navigation.nl/content/static-data-report
 			//echo "JSON gpsdData: \n"; print_r($gpsdData); echo "\n";
@@ -219,7 +249,7 @@ do {
 			}
 			$aisData[$vehicle]['destination'] = filter_var($gpsdData['destination'],FILTER_SANITIZE_STRING); 	// Destination Maximum 20 characters using 6-bit ASCII; @@@@@@@@@@@@@@@@@@@@ = not available For SAR aircraft, the use of this field may be decided by the responsible administration
 			$aisData[$vehicle]['dte'] = (int)filter_var($gpsdData['dte'],FILTER_SANITIZE_NUMBER_INT); 	// DTE Data terminal equipment (DTE) ready (0 = available, 1 = not available = default) (see § 3.3.1)
-			break;
+			//break; 	// comment break чтобы netAIS мог посылать информацию типа 5,24 и 6,8 в сообщени типа 1
 		case 6: 	// http://www.e-navigation.nl/asm  http://192.168.10.10/gpsd/AIVDM.adoc
 		case 8: 	// 
 			//echo "JSON gpsdData:\n"; print_r($gpsdData); echo "\n";
@@ -272,8 +302,6 @@ do {
 	//echo "\n aisData "; print_r($aisData);
 	clearstatcache(TRUE,$aisJSONfileName);
 	file_put_contents($aisJSONfileName,json_encode($aisData),LOCK_EX);
-	//$aisDataJSON = json_encode($aisData);
-	//exec("echo '$aisDataJSON' > $aisJSONfileName");
 	@chmod($aisJSONfileName,0666); 	// файл мог создать кто-нибудь ещё
 	clearstatcache(TRUE,$aisJSONfileName);
 	
@@ -289,8 +317,9 @@ do {
 	if($sleepTime > 0) usleep($sleepTime);
 } while(1);
 ENDEND:
-@fwrite($gpsd, '?WATCH={"enable":false};'); 	// велим демону выключить устройства
+@fwrite($gpsd, '?WATCH={"enable":false};'."\n"); 	// велим демону выключить устройства
 echo "\nSending TURN OFF\n";
+@fclose($gpsd);
 
 return $msg;
 
