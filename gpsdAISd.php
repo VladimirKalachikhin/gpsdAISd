@@ -206,15 +206,27 @@ do {
 			}
 			else {
 				//$aisData[$vehicle]['turn'] = (int)filter_var($gpsdData['turn'],FILTER_SANITIZE_NUMBER_INT); 	// тут чёта сложное...  Rate of turn ROTAIS 0 to +126 = turning right at up to 708° per min or higher 0 to –126 = turning left at up to 708° per min or higher Values between 0 and 708° per min coded by ROTAIS = 4.733 SQRT(ROTsensor) degrees per min where  ROTsensor is the Rate of Turn as input by an external Rate of Turn Indicator (TI). ROTAIS is rounded to the nearest integer value. +127 = turning right at more than 5° per 30 s (No TI available) –127 = turning left at more than 5° per 30 s (No TI available) –128 (80 hex) indicates no turn information available (default). ROT data should not be derived from COG information.
-				if($gpsdData['speed']>1022) $aisData[$vehicle]['speed'] = NULL;
-				else $aisData[$vehicle]['speed'] = (float)filter_var($gpsdData['speed'],FILTER_SANITIZE_NUMBER_FLOAT)*185.2/3600; 	// SOG Speed over ground in m/sec 	(in 1/10 knot steps (0-102.2 knots) 1 023 = not available, 1 022 = 102.2 knots or higher)
-				if($gpsdData['lon']==181) $aisData[$vehicle]['lon'] = NULL;
-				else $aisData[$vehicle]['lon'] = (float)filter_var($gpsdData['lon'],FILTER_SANITIZE_NUMBER_FLOAT)/(10000*60); 	// Longitude in degrees	( 1/10 000 min (±180°, East = positive (as per 2’s complement), West = negative (as per 2’s complement). 181 = (6791AC0h) = not available = default) )
-				if($gpsdData['lat']==91) $aisData[$vehicle]['lat'] = NULL;
-				else $aisData[$vehicle]['lat'] = (float)filter_var($gpsdData['lat'],FILTER_SANITIZE_NUMBER_FLOAT)/(10000*60); 	// Latitude in degrees (1/10 000 min (±90°, North = positive (as per 2’s complement), South = negative (as per 2’s complement). 91° (3412140h) = not available = default))
+				if($gpsdData['type'] == 27) { 	// оказывается, там координаты в 1/10 минуты и скорость в узлах!!!
+					if($gpsdData['lon']==181) $aisData[$vehicle]['lon'] = NULL;
+					else $aisData[$vehicle]['lon'] = (float)filter_var($gpsdData['lon'],FILTER_SANITIZE_NUMBER_FLOAT)/(10*60); 	// Longitude in degrees	( 1/10 min (±180°, East = positive (as per 2’s complement), West = negative (as per 2’s complement). 181 = (6791AC0h) = not available = default) )
+					if($gpsdData['lat']==91) $aisData[$vehicle]['lat'] = NULL;
+					else $aisData[$vehicle]['lat'] = (float)filter_var($gpsdData['lat'],FILTER_SANITIZE_NUMBER_FLOAT)/(10*60); 	// Latitude in degrees (1/10 min (±90°, North = positive (as per 2’s complement), South = negative (as per 2’s complement). 91° (3412140h) = not available = default))
+					if($gpsdData['speed']==63) $aisData[$vehicle]['speed'] = NULL;
+					else $aisData[$vehicle]['speed'] = (float)filter_var($gpsdData['speed'],FILTER_SANITIZE_NUMBER_FLOAT)*1852/3600; 	// SOG Speed over ground in m/sec 	Knots (0-62); 63 = not available = default
+					if($gpsdData['course']==511) $aisData[$vehicle]['course'] = NULL;
+					else $aisData[$vehicle]['course'] = (float)filter_var($gpsdData['course'],FILTER_SANITIZE_NUMBER_FLOAT); 	// Путевой угол. COG Course over ground in degrees Degrees (0-359); 511 = not available = default
+				}
+				else {
+					if($gpsdData['lon']==181) $aisData[$vehicle]['lon'] = NULL;
+					else $aisData[$vehicle]['lon'] = (float)filter_var($gpsdData['lon'],FILTER_SANITIZE_NUMBER_FLOAT)/(10000*60); 	// Longitude in degrees	( 1/10 000 min (±180°, East = positive (as per 2’s complement), West = negative (as per 2’s complement). 181 = (6791AC0h) = not available = default) )
+					if($gpsdData['lat']==91) $aisData[$vehicle]['lat'] = NULL;
+					else $aisData[$vehicle]['lat'] = (float)filter_var($gpsdData['lat'],FILTER_SANITIZE_NUMBER_FLOAT)/(10000*60); 	// Latitude in degrees (1/10 000 min (±90°, North = positive (as per 2’s complement), South = negative (as per 2’s complement). 91° (3412140h) = not available = default))
+					if($gpsdData['speed']>1022) $aisData[$vehicle]['speed'] = NULL;
+					else $aisData[$vehicle]['speed'] = (float)filter_var($gpsdData['speed'],FILTER_SANITIZE_NUMBER_FLOAT)*185.2/3600; 	// SOG Speed over ground in m/sec 	(in 1/10 knot steps (0-102.2 knots) 1 023 = not available, 1 022 = 102.2 knots or higher)
+					if($gpsdData['course']==3600) $aisData[$vehicle]['course'] = NULL;
+					else $aisData[$vehicle]['course'] = (float)filter_var($gpsdData['course'],FILTER_SANITIZE_NUMBER_FLOAT)/10; 	// Путевой угол. COG Course over ground in degrees ( 1/10 = (0-3599). 3600 (E10h) = not available = default. 3601-4095 should not be used)
+				}
 			}
-			if($gpsdData['course']==3600) $aisData[$vehicle]['course'] = NULL;
-			else $aisData[$vehicle]['course'] = (float)filter_var($gpsdData['course'],FILTER_SANITIZE_NUMBER_FLOAT)/10; 	// Путевой угол. COG Course over ground in degrees ( 1/10 = (0-3 599). 3 600 (E10h) = not available = default. 3 601-4 095 should not be used)
 			if($gpsdData['heading']==511) $aisData[$vehicle]['heading'] = NULL;
 			else $aisData[$vehicle]['heading'] = (float)filter_var($gpsdData['heading'],FILTER_SANITIZE_NUMBER_FLOAT); 	// Истинный курс. True heading Degrees (0-359) (511 indicates not available = default)
 			if($gpsdData['second']>59) $aisData[$vehicle]['timestamp'] = time();
