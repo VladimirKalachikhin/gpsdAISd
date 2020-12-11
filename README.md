@@ -26,5 +26,11 @@ gpsdAIS daemon checks the flag file. Daemon continues to run if the flag file __
 Timeouts define in the begin of the script file, for easily adjusted it.
 ## Output
 The output data file are JSON encoded array with MMSI keys and an array of data as value. The data are key-value pair as described in gpsd/www/AIVDM.adoc and [e-Navigation Netherlands](http://www.e-navigation.nl/system-messages) site, except:  
-* The units of measurement are given in the human species
-* The timestamp  is Unix timestamp
+
+* Speed in m/sec
+* Location in degrees
+* Angles in degrees
+* Draught in meters
+* Length in meters
+* Beam in meters
+* Time are UNIX timestamp

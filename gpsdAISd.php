@@ -15,8 +15,8 @@ So, if two instruments are connected to the gpsd and each sends data once a seco
 the $minLoopTime mast be max 500000 microseconds, or less.
 */
 
-$minLoopTime = 500000; 	// microseconds, the time of one survey gpsd cycle is not less than; цикл не должен быть быстрее, иначе он займёт весь процессор.
-$noVehicleTimeout = 600; 	// seconds, time of continuous absence of the vessel in AIS, when reached - is deleted from the data. "when a ship is moored or at anchor, the position message is only broadcast every 180 seconds;"
+//$minLoopTime = 500000; 	// microseconds, the time of one survey gpsd cycle is not less than; цикл не должен быть быстрее, иначе он займёт весь процессор.
+$minLoopTime = 1000000; 	// microseconds, 
 $runTimeOut = 20; 	// seconds, time activity of daemon after the start. After expiration - exit
 
 $SEEN_GPS = 0x01; $SEEN_AIS = 0x08;
@@ -26,7 +26,7 @@ $aisData=array(); 	// AIS data collection
 //$dataType=$GLOBALS['SEEN_GPS']|$GLOBALS['SEEN_AIS']; 	// 
 $dataType=$GLOBALS['SEEN_AIS']; 	// 
 
-$options = getopt("o::h::p::");
+$options = getopt("o::h::p::",'nvto::');
 //print_r($options); //
 $aisJSONfileName = filter_var(@$options['o'],FILTER_SANITIZE_URL);
 if(!$aisJSONfileName) $aisJSONfileName = 'aisJSONdata';
@@ -43,6 +43,7 @@ echo "aisJSONfileName=$aisJSONfileName; daemonRunningFlag=$daemonRunningFlag;\n"
 
 if(!($host=filter_var(@$options['h'],FILTER_VALIDATE_DOMAIN))) $host='localhost';
 if(!($port=filter_var(@$options['p'],FILTER_VALIDATE_INT))) $port=2947;
+if(!$noVehicleTimeout = filter_var(@$options['nvto'],FILTER_VALIDATE_INT)) $noVehicleTimeout = 600; 	// seconds, time of continuous absence of the vessel in AIS, when reached - is deleted from the data. "when a ship is moored or at anchor, the position message is only broadcast every 180 seconds;"
 
 echo "Begin. dataType=$dataType;\n";
 if(IRun()) { 	// Запущен ли ещё один я?
