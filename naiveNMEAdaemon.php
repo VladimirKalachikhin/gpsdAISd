@@ -11,7 +11,7 @@ gpsd run to connect this:
 $ gpsd -N -n tcp://192.168.10.10:2222
 */
 $options = getopt("i::b::");
-if(!($nmeaFileName = filter_var($options['i'],FILTER_SANITIZE_URL))) $nmeaFileName = 'sample1.log'; 	// NMEA sentences file name;
+if(!($nmeaFileName = filter_var(@$options['i'],FILTER_SANITIZE_URL))) $nmeaFileName = 'sample1.log'; 	// NMEA sentences file name;
 if(!($bindAddres=filter_var(@$options['b'],FILTER_VALIDATE_DOMAIN))) $bindAddres = "tcp://127.0.0.1:2222"; 	// Daemon's access address;
 if($nmeaFileName=='sample1.log') {
 	echo "Usage:\n  php naiveNMEAdaemon.php -isample1.log [-btcp://127.0.0.1:2222]\n";
