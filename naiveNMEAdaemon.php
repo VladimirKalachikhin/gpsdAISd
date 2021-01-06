@@ -33,7 +33,7 @@ $socket = stream_socket_server($bindAddres, $errno, $errstr);
 if (!$socket) {
   return "$errstr ($errno)\n";
 } 
-echo "Wait for first connection\n";
+echo "Wait for first connection on $bindAddres\n";
 $conn = stream_socket_accept($socket);
 echo "Connected! Go to loop\n";
 $nStr = 0; 	// number of sending string
