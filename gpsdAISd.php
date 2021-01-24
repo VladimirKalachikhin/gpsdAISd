@@ -349,6 +349,7 @@ function IRun() {
 $pid = getmypid();
 //echo "pid=$pid\n";
 exec("ps -A w | grep '".pathinfo(__FILE__,PATHINFO_BASENAME)."'",$psList);
+if(!$psList) exec("ps w | grep '".pathinfo(__FILE__,PATHINFO_BASENAME)."'",$psList); 	// for OpenWRT. For others -- let's hope so all run from one user
 //print_r($psList); //
 $run = FALSE;
 foreach($psList as $str) {

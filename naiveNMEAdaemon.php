@@ -56,9 +56,10 @@ while ($conn) { 	//
 			break 2;
 		}
 		$startTime = microtime(TRUE);
-		$nmeaData = fgets($handle, 2048);
+		$nmeaData = trim(fgets($handle, 2048));
 		statCollect($nmeaData);
 		//echo "$nmeaData\n";
+		//$res = fwrite($conn, $nmeaData . "\r\n");
 		$res = fwrite($conn, $nmeaData . "\n");
 		if($res===FALSE) {
 			echo "Error write to socket. Break connection\n";
