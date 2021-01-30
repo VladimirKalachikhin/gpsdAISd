@@ -10,19 +10,21 @@ $ php naiveNMEAdaemon.php -isample1.log -btcp://127.0.0.1:2222
 gpsd run to connect this:
 $ gpsd -N -n tcp://192.168.10.10:2222
 */
-$options = getopt("i::b::");
+$options = getopt("i::t::b::");
 if(!($nmeaFileName = filter_var(@$options['i'],FILTER_SANITIZE_URL))) $nmeaFileName = 'sample1.log'; 	// NMEA sentences file name;
+if(!($delay = filter_var(@$options['t'],FILTER_SANITIZE_NUMBER_INT))) $delay = 200000; 	// Min interval between sends sentences, in microseconds. 200000 are semi-realtime for sample1.log
+//$delay = 1000000; 	// 
 if(!($bindAddres=filter_var(@$options['b'],FILTER_VALIDATE_DOMAIN))) $bindAddres = "tcp://127.0.0.1:2222"; 	// Daemon's access address;
 if($nmeaFileName=='sample1.log') {
-	echo "Usage:\n  php naiveNMEAdaemon.php -isample1.log [-btcp://127.0.0.1:2222]\n";
-	echo "now run naiveNMEAdaemon.php -i$nmeaFileName -b$bindAddres\n";
+	echo "Usage:\n  php naiveNMEAdaemon.php [-isample1.log] [-t200000] [-btcp://127.0.0.1:2222]\n";
+	echo "-i nmea log file, default sample1.log\n";
+	echo "-t delay between the log file string sent, microsecunds, default 200000\n";
+	echo "-b bind address:port, default tcp://127.0.0.1:2222\n";
+	echo "now run naiveNMEAdaemon.php -i$nmeaFileName -t$delay -b$bindAddres\n";
 }
 
 //$run = 1800; 		// Overall time of work, in seconds. If 0 - infinity.
 $run = 0; 		// 
-//$delay = 200000; 	// Min interval between sends sentences, in microseconds. 200000 are semi-realtime for sample1.log
-$delay = 100000; 	// Min interval between sends sentences, in microseconds. 200000 are semi-realtime for sample1.log
-
 $strLen = 0;
 $r = array(" | "," / "," - "," \ ");
 $i = 0;
@@ -59,6 +61,21 @@ while ($conn) { 	//
 		$nmeaData = trim(fgets($handle, 2048));
 		statCollect($nmeaData);
 		//echo "$nmeaData\n";
+		/* gpsbabel создает NMEA с выражениями GGA, в которых число используемых спутников
+		всегда равно 0.
+		gpsd считает, что если координаты есть, а спутников нет -- это ошибка, но не игнорирует
+		такое сообщение, а сообщает, что координат нет (NO FIX, "mode":1)
+		Следующий код добавляет в сообщения GGA сколько-то спутников, если их 0 и есть координаты
+		*/
+		if(strtoupper(substr($nmeaData,0,6))=='$GPGGA') {
+			$nmea = str_getcsv($nmeaData);
+			array_pop($nmea);
+			if($nmea[2]!=NULL and $nmea[4]!=NULL and !intval($nmea[7])) { 	// есть широта и долгота и нет спутников
+				$nmea[7] = '06'; 	// будет столько спутников
+				$nmeaData = implode(',',$nmea).',';
+				$nmeaData .= '*'.NMEAchecksumm($nmeaData);
+			}
+		}
 		//$res = fwrite($conn, $nmeaData . "\r\n");
 		$res = fwrite($conn, $nmeaData . "\n");
 		if($res===FALSE) {
@@ -130,4 +147,17 @@ foreach($statCollection as $code => $count){
 }
 $statCollection = array();
 } // end statShow
+
+function NMEAchecksumm($nmea){
+/**/
+if(!(is_string($nmea) and $nmea[0]=='$')) return FALSE; 	// only not AIS NMEA string
+$checksum = 0;
+for($i = 1; $i < strlen($nmea); $i++){
+	if($nmea[$i]=='*') break;
+	$checksum ^= ord($nmea[$i]);
+}
+$checksum = str_pad(strtoupper(dechex($checksum)),2,'0',STR_PAD_LEFT);
+return $checksum;
+} // end function NMEAchecksumm
+
 ?>
