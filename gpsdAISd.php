@@ -26,7 +26,7 @@ $aisData=array(); 	// AIS data collection
 //$dataType=$GLOBALS['SEEN_GPS']|$GLOBALS['SEEN_AIS']; 	// 
 $dataType=$GLOBALS['SEEN_AIS']; 	// 
 
-$options = getopt("o::h::p::",'nvto::');
+$options = getopt("o::h::p::",['nvto::']);
 //print_r($options); //
 $aisJSONfileName = filter_var(@$options['o'],FILTER_SANITIZE_URL);
 if(!$aisJSONfileName) $aisJSONfileName = 'aisJSONdata';
